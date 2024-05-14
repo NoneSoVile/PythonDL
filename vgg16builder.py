@@ -68,7 +68,7 @@ def data_loader(data_dir,
         train_dataset, batch_size=batch_size, sampler=train_sampler)
  
     valid_loader = torch.utils.data.DataLoader(
-        valid_dataset, batch_size=batch_size, sampler=valid_sampler)
+        train_dataset, batch_size=batch_size, sampler=valid_sampler)#valid_dataset
 
     return (train_loader, valid_loader)
 
@@ -173,7 +173,7 @@ test_loader = data_loader(data_dir='./data',
                               test=True)
 
 num_classes = 100
-num_epochs = 20
+num_epochs = 1000
 batch_size = 16
 learning_rate = 0.005
 
