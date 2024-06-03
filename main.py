@@ -5,6 +5,7 @@ import shutil
 import time
 import warnings
 import csv
+import pandas as pd
 from enum import Enum
 
 import torch
@@ -47,6 +48,8 @@ parser.add_argument('-b', '--batch-size', default=256, type=int,
                          'using Data Parallel or Distributed Data Parallel')
 parser.add_argument('--lr', '--learning-rate', default=0.1, type=float,
                     metavar='LR', help='initial learning rate', dest='lr')
+parser.add_argument('--lr-stepsize', '--learning-rate-step-size', default=20, type=int,
+                     help='learning rate step size of decay')
 parser.add_argument('--momentum', default=0.9, type=float, metavar='M',
                     help='momentum')
 parser.add_argument('--wd', '--weight-decay', default=1e-4, type=float,
@@ -205,7 +208,9 @@ def main_worker(gpu, ngpus_per_node, args):
                                 weight_decay=args.weight_decay)
     
     """Sets the learning rate to the initial LR decayed by 10 every 30 epochs"""
-    scheduler = StepLR(optimizer, step_size=30, gamma=0.1)
+    print("lr_stepsize of decay(epoch interval): ", int(args.lr_stepsize))
+    scheduler = StepLR(optimizer, step_size=int(args.lr_stepsize), gamma=0.1)
+    print("init learning rate: ", scheduler.get_last_lr())
     
     # optionally resume from a checkpoint
     if args.resume:
@@ -227,6 +232,15 @@ def main_worker(gpu, ngpus_per_node, args):
             scheduler.load_state_dict(checkpoint['scheduler'])
             print("=> loaded checkpoint '{}' (epoch {})"
                   .format(args.resume, checkpoint['epoch']))
+            
+            #load accuracy.csv
+            data = pd.read_csv('accuracy.csv')
+            train_acc1_list = data['train_acc1'].tolist()
+            train_acc5_list = data['train_acc5'].tolist()
+            val_acc1_list = data['val_acc1'].tolist()
+            val_acc5_list = data['val_acc5'].tolist()
+            print("training curve len of data: ", len(val_acc5_list))
+            print("val_acc5_list==>", val_acc5_list)
         else:
             print("=> no checkpoint found at '{}'".format(args.resume))
 
@@ -285,6 +299,7 @@ def main_worker(gpu, ngpus_per_node, args):
             train_sampler.set_epoch(epoch)
 
         # train for one epoch
+        print("new learning rate: ", scheduler.get_last_lr())
         train_acc1, train_acc5 = train(train_loader, model, criterion, optimizer, epoch, device, args)
         train_acc1_list.append(train_acc1.item())
         train_acc5_list.append(train_acc5.item())
